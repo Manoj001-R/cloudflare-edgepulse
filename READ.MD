@@ -32,6 +32,44 @@ flowchart TD
     DO --> FE
 ```
 
+  ## Application Screenshots
+
+  ### Dashboard
+
+  The dashboard shows active investigations, completed incidents, critical incidents, average investigation time, and recent incident history.
+
+  ![EdgePulse dashboard](images/Screenshot%202026-09-19%20194028.png)
+
+  ### New Investigation
+
+  Users enter a target URL and describe the problem. Quick examples populate common incident scenarios.
+
+  ![New investigation form](images/Screenshot%202026-09-19%20193715.png)
+
+  ### Incident Analysis and Evidence
+
+  The incident report displays AI analysis, confidence, findings, remediation actions, limitations, and diagnostic evidence such as DNS, HTTP, latency, and security headers.
+
+  ![Incident analysis and evidence](images/Screenshot%202026-09-19%20193459.png)
+
+  ### Investigation Timeline
+
+  The timeline shows progress through AI triage, diagnostic checks, evidence collection, and AI analysis.
+
+  ![Investigation timeline](images/Screenshot%202026-09-19%20193624.png)
+
+  ### Conversation and Follow-up Chat
+
+  Users can review the investigation conversation and ask follow-up questions about the collected evidence.
+
+  ![Incident conversation](images/Screenshot%202026-09-19%20193640.png)
+
+  ### Additional Investigation Views
+
+  ![EdgePulse investigation view](images/Screenshot%202026-09-19%20193657.png)
+
+  ![EdgePulse application view](images/Screenshot%202026-09-19%20193747.png)
+
 ## End-to-End Flow
 
 1. The user opens the React dashboard.
