@@ -60,11 +60,8 @@ flowchart TD
 
   ## Application Screenshots
 
-  ### Dashboard
 
-  ![EdgePulse dashboard](images/Screenshot%202026-09-19%20194028.png)
-
-  ### New Investigation
+  ### New Investigation & Dashboard
 
   ![New investigation form](images/Screenshot%202026-09-19%20193715.png)
 
