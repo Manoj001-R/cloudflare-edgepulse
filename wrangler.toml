@@ -1,0 +1,42 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "edgepulse"
+main = "src/worker/index.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+
+# Static Assets — serves the Vite-built React frontend
+[assets]
+directory = "./dist"
+
+# Workers AI Binding
+[ai]
+binding = "AI"
+
+# Durable Objects
+[[durable_objects.bindings]]
+name = "INCIDENT_SESSION"
+class_name = "IncidentSession"
+
+# Workflows
+[[workflows]]
+name = "incident-investigation"
+binding = "INVESTIGATION_WORKFLOW"
+class_name = "IncidentInvestigationWorkflow"
+
+# SQLite-backed Durable Object migration
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["IncidentSession"]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
+AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+MAX_INCIDENT_HISTORY = "50"
+REQUEST_TIMEOUT_MS = "10000"
+LATENCY_LOW_MS = "300"
+LATENCY_MODERATE_MS = "1000"
+LATENCY_HIGH_MS = "2000"
+DEMO_MODE = "false"
+# Optional local/remote Python LLM bridge. Leave empty to use Workers AI.
+PYTHON_LLM_URL = ""
