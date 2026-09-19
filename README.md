@@ -58,6 +58,34 @@ flowchart TD
     FE --> HIST[Incident History]
 ```
 
+  ## Application Screenshots
+
+  ### Dashboard
+
+  ![EdgePulse dashboard](images/Screenshot%202026-09-19%20194028.png)
+
+  ### New Investigation
+
+  ![New investigation form](images/Screenshot%202026-09-19%20193715.png)
+
+  ### Incident Analysis and Evidence
+
+  ![Incident analysis and evidence](images/Screenshot%202026-09-19%20193459.png)
+
+  ### Investigation Timeline
+
+  ![Investigation timeline](images/Screenshot%202026-09-19%20193624.png)
+
+  ### Conversation and Follow-up Chat
+
+  ![Incident conversation](images/Screenshot%202026-09-19%20193640.png)
+
+  ### Additional Investigation Views
+
+  ![EdgePulse investigation view](images/Screenshot%202026-09-19%20193657.png)
+
+  ![EdgePulse application view](images/Screenshot%202026-09-19%20193747.png)
+
 ## Cloudflare Services
 
 | Service | Usage |
