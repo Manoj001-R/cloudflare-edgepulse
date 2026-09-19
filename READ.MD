@@ -68,8 +68,6 @@ flowchart TD
 
   ![EdgePulse investigation view](images/Screenshot%202026-09-19%20193657.png)
 
-  ![EdgePulse application view](images/Screenshot%202026-09-19%20193747.png)
-
 ## End-to-End Flow
 
 1. The user opens the React dashboard.
