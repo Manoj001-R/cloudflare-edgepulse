@@ -60,9 +60,9 @@ flowchart TD
 
 ## Application Screenshots
 
-### Cloudflare Account Home
+### Dashboard Overview
 
-![Cloudflare account home](images/Screenshot%202026-09-23%20215959.png)
+![Dashboard overview](images/Screenshot%202026-09-23%20215959.png)
 
 ### Diagnostics Dashboard
 
@@ -76,17 +76,17 @@ flowchart TD
 
 ![Incident directory](images/Screenshot%202026-09-23%20220103.png)
 
-### EdgePulse Dashboard
+### Recent Incidents Dashboard
 
-![EdgePulse dashboard](images/Screenshot%202026-09-23%20220118.png)
+![Recent incidents dashboard](images/Screenshot%202026-09-23%20220118.png)
 
 ### New Investigation
 
 ![New investigation form](images/Screenshot%202026-09-23%20220132.png)
 
-### New Investigation Settings
+### Investigation Configuration
 
-![New investigation settings](images/Screenshot%202026-09-23%20220158.png)
+![Investigation configuration](images/Screenshot%202026-09-23%20220158.png)
 
 ## Cloudflare Services
 
