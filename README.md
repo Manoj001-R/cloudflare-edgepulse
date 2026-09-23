@@ -60,10 +60,6 @@ flowchart TD
 
 ## Application Screenshots
 
-### EdgePulse Logo
-
-![EdgePulse logo](images/Screenshot%202026-09-23%20214553.png)
-
 ### Cloudflare Account Home
 
 ![Cloudflare account home](images/Screenshot%202026-09-23%20215959.png)
