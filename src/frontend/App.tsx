@@ -1,103 +1,98 @@
 import React, { useState, useCallback } from 'react';
+import Sidebar, { NavTab } from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import NewIncident from './components/NewIncident';
-import IncidentChat from './components/IncidentChat';
-import IncidentHistory from './components/IncidentHistory';
 import IncidentDetails from './components/IncidentDetails';
-import EvidencePanel from './components/EvidencePanel';
+import IncidentsList from './components/IncidentsList';
+import DiagnosticsView from './components/DiagnosticsView';
+import SettingsView from './components/SettingsView';
 
-type View = 'dashboard' | 'new' | 'investigation' | 'details';
+type AppTab = NavTab | 'details';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [activeIncidentId, setActiveIncidentId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentTab, setCurrentTab] = useState<AppTab>('new');
+  const [activeIncidentId, setActiveIncidentId] = useState<string>('INC-20260919-0001');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleNewIncident = useCallback(() => {
-    setCurrentView('new');
-    setActiveIncidentId(null);
+  const handleNavigate = useCallback((tab: NavTab) => {
+    setCurrentTab(tab);
   }, []);
 
-  const handleIncidentCreated = useCallback((incidentId: string) => {
-    setActiveIncidentId(incidentId);
-    setCurrentView('investigation');
+  const handleNewInvestigation = useCallback(() => {
+    setCurrentTab('new');
   }, []);
 
-  const handleSelectIncident = useCallback((incidentId: string) => {
-    setActiveIncidentId(incidentId);
-    setCurrentView('details');
+  const handleSelectIncident = useCallback((id: string) => {
+    setActiveIncidentId(id);
+    setCurrentTab('details');
   }, []);
 
-  const handleViewInvestigation = useCallback((incidentId: string) => {
-    setActiveIncidentId(incidentId);
-    setCurrentView('investigation');
+  const handleIncidentCreated = useCallback((id: string) => {
+    setActiveIncidentId(id);
+    setCurrentTab('details');
   }, []);
 
-  const handleGoHome = useCallback(() => {
-    setCurrentView('dashboard');
-    setActiveIncidentId(null);
-  }, []);
-
-  const renderMainContent = () => {
-    switch (currentView) {
+  const renderContent = () => {
+    switch (currentTab) {
       case 'dashboard':
-        return <Dashboard onNewIncident={handleNewIncident} onSelectIncident={handleSelectIncident} />;
-      case 'new':
-        return <NewIncident onCreated={handleIncidentCreated} onCancel={handleGoHome} />;
-      case 'investigation':
-        return activeIncidentId ? (
-          <IncidentChat
-            incidentId={activeIncidentId}
-            onBack={handleGoHome}
+        return (
+          <Dashboard
+            onNewInvestigation={handleNewInvestigation}
+            onSelectIncident={handleSelectIncident}
           />
-        ) : null;
+        );
+      case 'new':
+        return (
+          <NewIncident
+            onCreated={handleIncidentCreated}
+            onCancel={() => setCurrentTab('dashboard')}
+          />
+        );
       case 'details':
-        return activeIncidentId ? (
+        return (
           <IncidentDetails
             incidentId={activeIncidentId}
-            onBack={handleGoHome}
-            onReplay={handleViewInvestigation}
+            onBack={() => setCurrentTab('dashboard')}
           />
-        ) : null;
+        );
+      case 'incidents':
+        return (
+          <IncidentsList
+            onSelectIncident={handleSelectIncident}
+            onNewInvestigation={handleNewInvestigation}
+          />
+        );
+      case 'diagnostics':
+        return <DiagnosticsView />;
+      case 'settings':
+        return <SettingsView />;
       default:
-        return <Dashboard onNewIncident={handleNewIncident} onSelectIncident={handleSelectIncident} />;
+        return (
+          <Dashboard
+            onNewInvestigation={handleNewInvestigation}
+            onSelectIncident={handleSelectIncident}
+          />
+        );
     }
   };
 
   return (
-    <div className="app-layout">
-      <Header onHome={handleGoHome} onNewIncident={handleNewIncident} />
-      <div className="main-content">
-        {/* Left Sidebar — Incident History */}
-        <aside
-          className="hidden lg:flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-elevated)] overflow-hidden"
-          style={{ display: sidebarOpen ? undefined : 'none' }}
-        >
-          <IncidentHistory
-            onSelect={handleSelectIncident}
-            activeId={activeIncidentId}
-          />
-        </aside>
+    <div className="app-container">
+      {/* Sidebar with EdgePulse Logo from images/image.png */}
+      <Sidebar
+        currentTab={currentTab === 'details' ? 'new' : currentTab}
+        onNavigate={handleNavigate}
+      />
 
-        {/* Center — Main Content */}
-        <main className="flex flex-col overflow-hidden">
-          {renderMainContent()}
-        </main>
-
-        {/* Right Panel — Evidence (shown during investigation/details) */}
-        <aside className="hidden lg:flex flex-col border-l border-[var(--color-border)] bg-[var(--color-bg-elevated)] overflow-hidden">
-          {activeIncidentId && (currentView === 'investigation' || currentView === 'details') ? (
-            <EvidencePanel incidentId={activeIncidentId} />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center p-6">
-              <div className="text-4xl mb-4 opacity-30">🔍</div>
-              <p className="text-[var(--color-text-dim)] text-sm">
-                Evidence panel will appear here during an investigation
-              </p>
-            </div>
-          )}
-        </aside>
+      {/* Main Content Area */}
+      <div className="main-wrapper">
+        <Header
+          onNewInvestigation={handleNewInvestigation}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+        {renderContent()}
       </div>
     </div>
   );
