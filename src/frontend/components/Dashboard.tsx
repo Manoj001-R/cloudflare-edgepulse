@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getStats, listIncidents } from '../lib/api';
 
 interface DashboardProps {
   onNewInvestigation: () => void;
@@ -12,8 +13,53 @@ export default function Dashboard({ onNewInvestigation, onSelectIncident }: Dash
   const [timeFilter, setTimeFilter] = useState('24h');
   const [isHealthChecking, setIsHealthChecking] = useState(false);
   const [healthCheckNotice, setHealthCheckNotice] = useState<string | null>(null);
+  const [backendIncidents, setBackendIncidents] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const incidentsList = [
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const [statsResponse, incidentResponse] = await Promise.all([
+          getStats().catch(() => null),
+          listIncidents({ limit: 5 }).catch(() => ({ incidents: [] })),
+        ]);
+
+        if (cancelled) return;
+
+        setStats(statsResponse);
+        setBackendIncidents(incidentResponse?.incidents || []);
+      } catch {
+        setBackendIncidents([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const incidentsList = backendIncidents.length ? backendIncidents.map((item) => ({
+    id: item.id,
+    domain: new URL(item.targetUrl || 'https://example.com').hostname,
+    issue: item.userQuestion || 'Incident investigation',
+    severity: item.severity ? item.severity.charAt(0).toUpperCase() + item.severity.slice(1) : 'Medium',
+    severityColor: item.severity === 'critical' ? '#dc2626' : item.severity === 'high' ? '#ef4444' : '#3b82f6',
+    severityBg: item.severity === 'critical' ? '#fee2e2' : item.severity === 'high' ? '#fef2f2' : '#eff6ff',
+    status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Created',
+    statusColor: '#3b82f6',
+    statusBg: '#eff6ff',
+    isAnalyzing: item.status === 'investigating' || item.status === 'planning',
+    confidence: item.confidence || 0,
+    created: 'recent',
+    actionText: 'View Investigation',
+    isPrimaryAction: true,
+  })) : [
     {
       id: 'INC-20260919-0001',
       domain: 'example.com',

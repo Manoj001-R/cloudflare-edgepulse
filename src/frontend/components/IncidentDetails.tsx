@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getAnalysis, getIncident, getMessages, getSteps, replayIncident, sendChat } from '../lib/api';
 import RemediationModal from './RemediationModal';
 
 interface IncidentDetailsProps {
@@ -16,12 +17,64 @@ export default function IncidentDetails({
   const [copilotInput, setCopilotInput] = useState('');
   const [copilotReplies, setCopilotReplies] = useState<Array<{ q: string; a: string }>>([]);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [incidentData, setIncidentData] = useState<any>(null);
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
-  const handleReRun = () => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setIsLoading(true);
+      setDataError(null);
+
+      try {
+        const [incidentResponse, analysisResponse, messagesResponse, stepsResponse] = await Promise.all([
+          getIncident(incidentId).catch(() => null),
+          getAnalysis(incidentId).catch(() => null),
+          getMessages(incidentId).catch(() => []),
+          getSteps(incidentId).catch(() => []),
+        ]);
+
+        if (cancelled) return;
+
+        setIncidentData(incidentResponse || null);
+        setAnalysisData(analysisResponse || null);
+
+        if (messagesResponse?.length) {
+          setCopilotReplies((prev) => prev.length ? prev : messagesResponse
+            .filter((msg: any) => msg.role === 'assistant')
+            .map((msg: any) => ({ q: 'Previous context', a: msg.content })));
+        }
+
+        if (stepsResponse?.length && !incidentResponse) {
+          setDataError('The incident exists but the full payload is still being prepared.');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDataError(error instanceof Error ? error.message : 'Unable to load incident data');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [incidentId]);
+
+  const handleReRun = async () => {
     setIsReRunning(true);
-    setTimeout(() => {
+    try {
+      await replayIncident(incidentId, false);
+    } catch (error) {
+      setExportNotice(error instanceof Error ? error.message : 'Replay failed');
+    } finally {
       setIsReRunning(false);
-    }, 1200);
+    }
   };
 
   const handleExport = () => {
@@ -32,29 +85,29 @@ export default function IncidentDetails({
     }, 1000);
   };
 
-  const handleAskCopilot = (e: React.FormEvent) => {
+  const handleAskCopilot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!copilotInput.trim()) return;
 
     const question = copilotInput.trim();
     setCopilotInput('');
 
-    // Generate intelligent SRE response
-    let answer =
-      'Based on telemetry correlation, the 1,820ms latency is 96% concentrated in origin server processing time. Recommend checking Postgres connection pools and applying edge cache-everything rules.';
-    if (question.toLowerCase().includes('database') || question.toLowerCase().includes('sql') || question.toLowerCase().includes('postgres')) {
-      answer =
-        'Active trace spans indicate connection queue starvation on PostgreSQL primary node (port 5432). Long-running table scans on `orders` are holding exclusive locks.';
-    } else if (question.toLowerCase().includes('cache') || question.toLowerCase().includes('cloudflare') || question.toLowerCase().includes('ttl')) {
-      answer =
-        'Deploying a 120s TTL Edge Cache rule will absorb ~85% of incoming read requests at Cloudflare PoPs, reducing origin CPU load to under 20%.';
-    } else if (question.toLowerCase().includes('dns') || question.toLowerCase().includes('route')) {
-      answer =
-        'DNS resolution is healthy (45ms) and global BGP anycast routing is optimal (22ms). The root cause is strictly within the application origin layer.';
+    try {
+      const response = await sendChat(incidentId, question);
+      setCopilotReplies((prev) => [...prev, { q: question, a: response.answer }]);
+    } catch (error) {
+      setCopilotReplies((prev) => [...prev, {
+        q: question,
+        a: error instanceof Error ? error.message : 'Unable to reach the backend AI service.',
+      }]);
     }
-
-    setCopilotReplies((prev) => [...prev, { q: question, a: answer }]);
   };
+
+  const targetUrl = incidentData?.incident?.targetUrl || 'https://example.com';
+  const currentSeverity = (incidentData?.incident?.severity || 'high').toLowerCase();
+  const currentStatus = incidentData?.incident?.status || 'investigating';
+  const summary = analysisData?.summary || 'AI analysis is loading from the backend service.';
+  const rootCause = analysisData?.rootCause || 'No root cause available yet.';
 
   return (
     <div className="page-scroll-area fade-in">
@@ -66,11 +119,11 @@ export default function IncidentDetails({
               {incidentId}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-              High Severity
+              {currentSeverity === 'critical' ? 'Critical Severity' : currentSeverity === 'medium' ? 'Medium Severity' : currentSeverity === 'low' ? 'Low Severity' : 'High Severity'}
             </span>
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                isResolved
+                isResolved || currentStatus === 'completed'
                   ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                   : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
               }`}
@@ -80,19 +133,19 @@ export default function IncidentDetails({
                   isResolved ? 'bg-emerald-500' : 'bg-indigo-600 animate-pulse'
                 }`}
               />
-              {isResolved ? 'Resolved' : 'Investigating'}
+              {isResolved || currentStatus === 'completed' ? 'Resolved' : 'Investigating'}
             </span>
           </div>
 
           <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
             <span>Target:</span>
             <a
-              href="https://example.com"
+              href={targetUrl}
               target="_blank"
               rel="noreferrer"
               className="text-indigo-600 font-medium hover:underline inline-flex items-center gap-1"
             >
-              https://example.com
+              {targetUrl}
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                 <polyline points="15 3 21 3 21 9" />

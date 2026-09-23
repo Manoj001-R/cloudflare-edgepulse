@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { listIncidents } from '../lib/api';
 
 interface IncidentsListProps {
   onSelectIncident: (id: string) => void;
@@ -8,120 +9,61 @@ interface IncidentsListProps {
 export default function IncidentsList({ onSelectIncident, onNewInvestigation }: IncidentsListProps) {
   const [filterQuery, setFilterQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const allIncidents = [
-    {
-      id: 'INC-20260919-0001',
-      domain: 'example.com',
-      issue: 'Origin TTFB Spike (1,820ms)',
-      severity: 'High',
-      severityColor: '#ef4444',
-      severityBg: '#fef2f2',
-      status: 'Analyzing',
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const response = await listIncidents({ limit: 50 });
+        if (!cancelled) setIncidents(response.incidents || []);
+      } catch {
+        if (!cancelled) setIncidents([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const rows = incidents.map((inc) => {
+    const severity = (inc.severity || 'medium').toLowerCase();
+    return {
+      id: inc.id,
+      domain: inc.targetUrl ? new URL(inc.targetUrl).hostname : 'example.com',
+      issue: inc.userQuestion || 'Incident investigation',
+      severityLabel: severity.charAt(0).toUpperCase() + severity.slice(1),
+      severity,
+      severityColor: severity === 'critical' ? '#dc2626' : severity === 'high' ? '#ef4444' : '#3b82f6',
+      severityBg: severity === 'critical' ? '#fee2e2' : severity === 'high' ? '#fef2f2' : '#eff6ff',
+      status: (inc.status || 'created').charAt(0).toUpperCase() + (inc.status || 'created').slice(1),
       statusColor: '#3b82f6',
       statusBg: '#eff6ff',
-      confidence: 84,
-      targetUrl: 'https://example.com',
-      created: '2 min ago',
-    },
-    {
-      id: 'INC-20260919-0002',
-      domain: 'api.example.com',
-      issue: 'HTTP 502 Bad Gateway',
-      severity: 'Medium',
-      severityColor: '#3b82f6',
-      severityBg: '#eff6ff',
-      status: 'Mitigated',
-      statusColor: '#64748b',
-      statusBg: '#f1f5f9',
-      confidence: 76,
-      targetUrl: 'https://api.example.com',
-      created: '18 min ago',
-    },
-    {
-      id: 'INC-20260919-0003',
-      domain: 'shop.example.com',
-      issue: 'DNS Resolution Failure',
-      severity: 'Critical',
-      severityColor: '#dc2626',
-      severityBg: '#fee2e2',
-      status: 'Resolved',
-      statusColor: '#059669',
-      statusBg: '#ecfdf5',
-      confidence: 91,
-      targetUrl: 'https://shop.example.com',
-      created: '1 hour ago',
-    },
-    {
-      id: 'INC-20260919-0004',
-      domain: 'auth.globalcdn.net',
-      issue: 'TLS Handshake Latency',
-      severity: 'Low',
-      severityColor: '#64748b',
-      severityBg: '#f1f5f9',
-      status: 'Resolved',
-      statusColor: '#059669',
-      statusBg: '#ecfdf5',
-      confidence: 95,
-      targetUrl: 'https://auth.globalcdn.net',
-      created: '3 hours ago',
-    },
-    {
-      id: 'INC-20260919-0005',
-      domain: 'checkout.payments.io',
-      issue: 'Origin Gateway Timeout',
-      severity: 'High',
-      severityColor: '#ef4444',
-      severityBg: '#fef2f2',
-      status: 'Queued',
-      statusColor: '#64748b',
-      statusBg: '#f1f5f9',
-      confidence: 68,
-      targetUrl: 'https://checkout.payments.io',
-      created: '5 hours ago',
-    },
-    {
-      id: 'INC-20260919-0006',
-      domain: 'static.assets-edge.com',
-      issue: 'Cache Hit Ratio Drop (<35%)',
-      severity: 'Medium',
-      severityColor: '#3b82f6',
-      severityBg: '#eff6ff',
-      status: 'Resolved',
-      statusColor: '#059669',
-      statusBg: '#ecfdf5',
-      confidence: 94,
-      targetUrl: 'https://static.assets-edge.com',
-      created: '12 hours ago',
-    },
-    {
-      id: 'INC-20260919-0007',
-      domain: 'gateway.internal-api.net',
-      issue: 'BGP Route Flapping US-East',
-      severity: 'Critical',
-      severityColor: '#dc2626',
-      severityBg: '#fee2e2',
-      status: 'Resolved',
-      statusColor: '#059669',
-      statusBg: '#ecfdf5',
-      confidence: 98,
-      targetUrl: 'https://gateway.internal-api.net',
-      created: '1 day ago',
-    },
-  ];
-
-  const filtered = allIncidents.filter((inc) => {
-    if (filterQuery) {
-      const q = filterQuery.toLowerCase();
-      if (!inc.id.toLowerCase().includes(q) && !inc.domain.toLowerCase().includes(q) && !inc.issue.toLowerCase().includes(q)) {
-        return false;
-      }
-    }
-    if (severityFilter !== 'all' && inc.severity.toLowerCase() !== severityFilter.toLowerCase()) {
-      return false;
-    }
-    return true;
+      confidence: inc.confidence || 0,
+      created: 'recent',
+    };
   });
+
+  const filtered = rows.filter((inc) => {
+    const q = filterQuery.toLowerCase();
+    const matchesQuery = !q || inc.id.toLowerCase().includes(q) || inc.domain.toLowerCase().includes(q) || inc.issue.toLowerCase().includes(q);
+    const matchesSeverity = severityFilter === 'all' || inc.severity === severityFilter;
+    return matchesQuery && matchesSeverity;
+  });
+
+  if (loading) {
+    return (
+      <div className="page-scroll-area fade-in">
+        <div className="white-card p-6 text-sm text-slate-600">Loading incidents from the backend…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-scroll-area fade-in">
@@ -219,7 +161,7 @@ export default function IncidentsList({ onSelectIncident, onNewInvestigation }: 
                       className="px-2.5 py-0.5 rounded-full font-semibold text-[11px]"
                       style={{ color: inc.severityColor, backgroundColor: inc.severityBg }}
                     >
-                      {inc.severity}
+                      {inc.severityLabel}
                     </span>
                   </td>
                   <td className="py-3.5 px-5 whitespace-nowrap">
@@ -230,22 +172,22 @@ export default function IncidentsList({ onSelectIncident, onNewInvestigation }: 
                       {inc.status}
                     </span>
                   </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap">
-                    <strong className="text-slate-800">{inc.confidence}%</strong>
+                  <td className="py-3.5 px-5 whitespace-nowrap text-slate-700 font-semibold">
+                    {inc.confidence}%
                   </td>
-                  <td className="py-3.5 px-5 text-slate-500 whitespace-nowrap">
+                  <td className="py-3.5 px-5 whitespace-nowrap text-slate-500 font-medium">
                     {inc.created}
                   </td>
                   <td className="py-3.5 px-5 text-right whitespace-nowrap">
                     <button
                       type="button"
-                      className="px-3 py-1 bg-white border border-slate-200 text-slate-700 font-semibold rounded text-xs hover:bg-slate-50"
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectIncident(inc.id);
                       }}
+                      className="px-3 py-1.5 bg-slate-900 text-white rounded-md text-[11px] font-semibold hover:bg-slate-700 transition-colors"
                     >
-                      View Details →
+                      View
                     </button>
                   </td>
                 </tr>

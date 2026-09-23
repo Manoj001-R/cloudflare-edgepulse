@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createIncident } from '../lib/api';
 
 interface NewIncidentProps {
   onCreated: (incidentId: string) => void;
@@ -14,6 +15,7 @@ export default function NewIncident({ onCreated, onCancel }: NewIncidentProps) {
   const [strategy, setStrategy] = useState<'ai' | 'full'>('ai');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pingStatus, setPingStatus] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const presets = [
     {
@@ -56,25 +58,45 @@ export default function NewIncident({ onCreated, onCancel }: NewIncidentProps) {
     }, 700);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const response = await createIncident({
+        targetUrl,
+        userQuestion: description,
+        demoMode: false,
+      });
+      onCreated(response.id || 'INC-NEW');
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to create incident');
+    } finally {
       setIsSubmitting(false);
-      onCreated('INC-20260919-0001');
-    }, 450);
+    }
   };
 
-  const handleRunDemo = () => {
+  const handleRunDemo = async () => {
     setTargetUrl('https://example.com');
     setDescription(
       'Users in Western Europe are reporting 504 timeouts on POST /checkout, or page load times exceeding 3 seconds...'
     );
+    setSubmitError(null);
     setIsSubmitting(true);
-    setTimeout(() => {
+
+    try {
+      const response = await createIncident({
+        targetUrl: 'https://example.com',
+        userQuestion: 'Users in Western Europe are reporting 504 timeouts on POST /checkout, or page load times exceeding 3 seconds...',
+        demoMode: true,
+      });
+      onCreated(response.id || 'INC-NEW');
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to create demo incident');
+    } finally {
       setIsSubmitting(false);
-      onCreated('INC-20260919-0001');
-    }, 400);
+    }
   };
 
   const handleReset = () => {
@@ -173,6 +195,12 @@ export default function NewIncident({ onCreated, onCancel }: NewIncidentProps) {
                 </div>
               )}
             </div>
+
+            {submitError && (
+              <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-sm text-red-700">
+                {submitError}
+              </div>
+            )}
 
             {/* What is happening? Field */}
             <div>
